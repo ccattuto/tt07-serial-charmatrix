@@ -1,4 +1,4 @@
-module ws2812b_driver(
+module ws2812b (
     input wire clk20,             // 20 MHz input clock
     input wire reset,
     input wire [23:0] data_in,    // color data
@@ -9,38 +9,34 @@ module ws2812b_driver(
 );
 
   // Define timing parameters according to WS2812B datasheet
-  parameter T0H = 400e-9;       // width of '0' high pulse (400ns)
-  parameter T1H = 800e-9;       // width of '1' high pulse (800ns)
-  parameter T0L = 850e-9;       // width of '0' low pulse (850ns)
-  parameter T1L = 450e-9;       // width of '1' low pulse (450ns)
-  parameter PERIOD = 1250e-9;   // total period of one bit (1250ns)
-  parameter RES_DELAY = 300e-6; // reset duration (300us)
+  localparam T0H = 400e-9;       // width of '0' high pulse (400ns)
+  localparam T1H = 800e-9;       // width of '1' high pulse (800ns)
+  localparam T0L = 850e-9;       // width of '0' low pulse (850ns)
+  localparam T1L = 450e-9;       // width of '1' low pulse (450ns)
+  localparam PERIOD = 1250e-9;   // total period of one bit (1250ns)
+  localparam RES_DELAY = 300e-6; // reset duration (300us)
 
   // Calculate clock cycles needed based on input clock frequency
   parameter CLOCK_FREQ = 20e6; // 20MHz clock frequency
 
   // Calculate clock cycles for each timing parameter
-  parameter [15:0] CYCLES_PERIOD = $floor(CLOCK_FREQ * PERIOD);
-  parameter [15:0] CYCLES_T0H = $floor(CLOCK_FREQ * T0H);
-  parameter [15:0] CYCLES_T1H = $floor(CLOCK_FREQ * T1H);
-  parameter [15:0] CYCLES_T0L = CYCLES_PERIOD - CYCLES_T0H;
-  parameter [15:0] CYCLES_T1L = CYCLES_PERIOD - CYCLES_T1H;
-  parameter [15:0] CYCLES_RESET = $floor(CLOCK_FREQ * RES_DELAY);
+  localparam [15:0] CYCLES_PERIOD = $floor(CLOCK_FREQ * PERIOD);
+  localparam [15:0] CYCLES_T0H = $floor(CLOCK_FREQ * T0H);
+  localparam [15:0] CYCLES_T1H = $floor(CLOCK_FREQ * T1H);
+  localparam [15:0] CYCLES_T0L = CYCLES_PERIOD - CYCLES_T0H;
+  localparam [15:0] CYCLES_T1L = CYCLES_PERIOD - CYCLES_T1H;
+  localparam [15:0] CYCLES_RESET = $floor(CLOCK_FREQ * RES_DELAY);
 
-  initial begin
-    led <= 0;
-    ready <= 0;
-  end
 
-  reg [4:0] bitpos = 0;
-  reg [15:0] time_counter = 0;
+  reg [4:0] bitpos;
+  reg [15:0] time_counter;
   reg will_latch;
 
-  // State machine
+  // state machine
   parameter IDLE = 0, START = 1, SEND_BIT = 2, RESET = 3;
   reg [1:0] state = IDLE;
 
-  reg [23:0] data; // = 24'b000000000111111101111111;
+  reg [23:0] data;
 
   // State machine logic
   always @(posedge clk20) begin
@@ -51,7 +47,7 @@ module ws2812b_driver(
       led <= 0;
       ready <= 0;
       data <= 24'b0;
-      will_latch = 0;
+      will_latch <= 0;
     end else begin
       case (state)
         IDLE: begin

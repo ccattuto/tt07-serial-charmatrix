@@ -114,7 +114,7 @@ reg valid = 0;
 wire ready;
 reg latch = 0;
 
-ws2812b_driver ws2812b (
+ws2812b ledstrip (
   .clk20(clk20),            // 20 MHz input clock
   .reset(boot_reset),
   .data_in(data),
