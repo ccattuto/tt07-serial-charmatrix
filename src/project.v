@@ -110,7 +110,7 @@ reg valid;
 reg latch;
 
 ws2812b ledstrip (
-  .clk(clk),      // 20 MHz input clock
+  .clk20(clk),      // 20 MHz input clock
   .reset(boot_reset),
   .data_in(data),
   .valid(valid),
@@ -131,7 +131,7 @@ localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
 reg [1:0] state;
 reg [16:0] counter;
 reg [7:0] textbuf[0:MAX_CHARS];
-reg [3:0] colorbuf[0:3];
+reg [3:0] colorbuf[0:MAX_CHARS];
 reg [2:0] textbuf_index;
 reg [7:0] led_index;
 reg [5:0] char_led_index;
