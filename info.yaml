@@ -15,12 +15,12 @@ project:
   
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
   source_files:        
-    - "project.v"
-    - "lfsr_rng.v"
-    - "color_rom.v"
-    - "char_rom.v"
     - "UARTReceiver.v"
+    - "lfsr_rng.v"
+    - "char_rom.v"
+    - "color_rom.v"
     - "ws2812b.v"
+    - "project.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
