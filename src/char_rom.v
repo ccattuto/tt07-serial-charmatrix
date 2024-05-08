@@ -5,7 +5,7 @@ module char_rom #(
     parameter ADDR_MAX = 126
 )(
     input wire [ADDR_WIDTH-1:0] address,
-    output wire [DATA_WIDTH-1:0] data
+    output reg [DATA_WIDTH-1:0] data
 );
 
 reg [DATA_WIDTH-1:0] mem [0:ADDR_MAX-ADDR_MIN+2];
@@ -16,9 +16,9 @@ end
 
 always @(address) begin
     if (address >= ADDR_MIN && address <= ADDR_MAX) begin
-        data <= mem[address-ADDR_MIN];
+        data = mem[address-ADDR_MIN];
     end else begin
-        data <= mem[ADDR_MAX-ADDR_MIN+1];
+        data = mem[ADDR_MAX-ADDR_MIN+1];
     end
 end
 
