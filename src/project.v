@@ -127,7 +127,8 @@ ws2812b ledstrip (
 localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
 reg [2:0] state;
 
-localparam NUM_LEDS = 140;
+localparam NUM_CHARS = 4;
+localparam NUM_LEDS = NUM_CHARS * 35; // 5x7 char matrix
 reg [7:0] led_index;
 reg [7:0] char_led_index;
 reg [23:0] data;
