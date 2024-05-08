@@ -128,7 +128,7 @@ localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
 reg [1:0] state;
 
 localparam NUM_CHARS = 4;
-localparam MAX_CHARS = 8;
+localparam MAX_CHARS = 4;
 localparam CHAR_LEDS = 35;
 localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS; // 5x7 char matrix
 reg [7:0] led_index;
