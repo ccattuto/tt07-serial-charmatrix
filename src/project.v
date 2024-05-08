@@ -231,7 +231,6 @@ always @(posedge clk20) begin
       uart_rx_ready <= 1; 
     end else begin        
       uart_rx_ready <= 0;
-      rgb_led0_r <= ~rgb_led0_r;
       textbuf[digit_index] <= uart_rx_data;
       colorbuf[digit_index] <= rnd_color;
       if (digit_index == 3) begin
