@@ -28,7 +28,7 @@ assign uart_rx = ui_in[3];
 assign uart_tx = uo_out[4];
 
 // LED strip signal
-assign lde = uo_out[0];
+assign led = uo_out[0];
 
 // clock
 wire clk20;
