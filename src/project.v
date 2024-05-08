@@ -110,9 +110,9 @@ color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) col_rom (
 );
 
 wire led;
-reg valid = 0;
+reg valid;
 wire ready;
-reg latch = 0;
+reg latch;
 
 ws2812b ledstrip (
   .clk20(clk20),            // 20 MHz input clock
@@ -138,6 +138,8 @@ always @(posedge clk20) begin
     char_led_index <= 0;
     data <= 24'b0;
     state <= IDLE;
+    valid <= 0;
+    latch <= 0;
   end else begin
     case (state)
       IDLE: begin
@@ -197,7 +199,7 @@ end
 
 reg [7:0] textbuf[0:3];
 reg [3:0] colorbuf[0:3];
-reg [0:3] textbuf_index;
+reg [3:0] textbuf_index;
 
 
 wire rng;
