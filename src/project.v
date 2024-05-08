@@ -38,15 +38,6 @@ assign clk20 = clk;
 wire boot_reset;
 assign boot_reset = ~rst_n;
 
-reg [19:0] counter = 0;
-reg refresh_trigger = 0;
-
-always @(posedge clk20) begin
-  counter <= counter + 1;
-  // trigger LED refresh every 2^17 ticks (~75 Hz)
-  refresh_trigger <= (&counter[16:0] == 1) ? 1 : 0;
-end
-
 //wire uart_tx_en;
 //assign uart_tx_en = 1;
 wire uart_rx_en;
@@ -134,6 +125,7 @@ localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS; // 5x7 char matrix
 reg [7:0] led_index;
 reg [5:0] char_led_index;
 reg [23:0] data;
+reg [16:0] counter;
 
 always @(posedge clk20) begin
   if (boot_reset) begin
@@ -143,7 +135,10 @@ always @(posedge clk20) begin
     state <= IDLE;
     valid <= 0;
     latch <= 0;
+    counter <= 0 ;
   end else begin
+    counter <= counter + 1;
+
     case (state)
       IDLE: begin
         led_index <= 0;
@@ -153,7 +148,7 @@ always @(posedge clk20) begin
         latch <= 0;
         char_index <= textbuf[textbuf_index];
         color_index <= colorbuf[textbuf_index];
-        if (refresh_trigger) begin
+        if (&counter[16:0]) begin
           state <= LOAD_DATA;
         end
       end
@@ -206,12 +201,12 @@ reg [2:0] textbuf_index;
 
 wire rng;
 reg [3:0] rnd_color; // 4-bit shift register
-always @(posedge counter[16]) begin
+always @(posedge clk20) begin
   rnd_color <= {rnd_color[2:0], rng};
 end
 
 lfsr_rng lfsr(
-  .clk(counter[16]),
+  .clk(clk20),
   .reset(boot_reset),
   .random_bit(rng)
 );
