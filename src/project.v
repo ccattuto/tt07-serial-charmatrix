@@ -19,13 +19,13 @@ module tt_um_ccattuto_charmatrix (
 // All output pins must be assigned. If not used, assign to 0.
 assign uio_out = 0;
 assign uio_oe  = 0;
-assign uo_out[3:1] = 0;
+assign uo_out[4:1] = 0;
 assign uo_out[7:5] = 0;
 
 // UART signals
 wire uart_rx, uart_tx;
 assign uart_rx = ui_in[3];
-assign uart_tx = uo_out[4];
+//assign uart_tx = uo_out[4];
 
 // LED strip signal
 assign led = uo_out[0];
