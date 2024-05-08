@@ -16,37 +16,31 @@ module tt_um_ccattuto_charmatrix (
     input  wire       rst_n     // reset_n - low to reset
 );
 
+
+// -------------- I/O PINS ---------------------------
+
 // All output pins must be assigned. If not used, assign to 0.
 assign uio_out = 0;
 assign uio_oe  = 0;
 assign uo_out[4:1] = 0;
 assign uo_out[7:5] = 0;
 
-// UART signals
-wire uart_rx, uart_tx;
+// UART receiver
+wire uart_rx;
 assign uart_rx = ui_in[3];
-//assign uart_tx = uo_out[4];
 
 // LED strip signal
 assign led = uo_out[0];
-
-// clock
-wire clk20;
-assign clk20 = clk;
 
 // reset
 wire boot_reset;
 assign boot_reset = ~rst_n;
 
-//wire uart_tx_en;
-//assign uart_tx_en = 1;
+
+// -------------- UART RECEIVER ---------------------------
+
 wire uart_rx_en;
 assign uart_rx_en = 1;
-
-// // UART TX
-// reg [7:0]   uart_tx_data;
-// reg         uart_tx_valid;
-// wire        uart_tx_ready;
 
 // UART RX
 wire [7:0]  uart_rx_data;
@@ -55,24 +49,11 @@ wire        uart_rx_error;
 wire        uart_rx_overrun;
 reg         uart_rx_ready;
 
-// UARTTransmitter #(
-//     .CLOCK_RATE(24000000),
-//     .BAUD_RATE(115200)
-// ) uart_tx_inst (
-//     .clk(clk48),
-//     .reset(boot_reset),       // reset
-//     .enable(uart_tx_en),      // TX enable
-//     .valid(uart_tx_valid),    // start of TX
-//     .in(uart_tx_data),        // data to transmit
-//     .out(uart_tx),            // TX signal
-//     .ready(uart_tx_ready)     // read for TX data
-// );
-
 UARTReceiver #(
     .CLOCK_RATE(20000000),
     .BAUD_RATE(9600)
 ) uart_rx_inst (
-    .clk(clk20),
+    .clk(clk),
     .reset(boot_reset),       // reset
     .enable(uart_rx_en),      // RX enable
     .in(uart_rx),             // RX signal
@@ -83,22 +64,45 @@ UARTReceiver #(
     .overrun(uart_rx_overrun) // RX overrun
 );
 
-  
+
+// -------------- CHARACTER ROM ---------------------------
+
 reg [7:0] char_index;
 wire [34:0] char_data;
-
-reg [3:0] color_index;
-wire [23:0] color_data;
 
 char_rom #(.DATA_WIDTH(35), .ADDR_WIDTH(8)) led_rom (
     .address(char_index),
     .data(char_data)
 );
 
+// -------------- COLOR ROM ---------------------------
+
+reg [3:0] color_index;
+wire [23:0] color_data;
+
 color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) col_rom (
     .address(color_index),
     .data(color_data)
 );
+
+
+// -------------- RNG ---------------------------
+
+wire rng;
+
+lfsr_rng lfsr(
+  .clk(clk),
+  .reset(boot_reset),
+  .random_bit(rng)
+);
+
+reg [3:0] rnd_color; // 4-bit shift register
+always @(posedge clk) begin
+  rnd_color <= {rnd_color[2:0], rng};
+end
+
+
+// -------------- WS2812B LED STRIP ---------------------------
 
 wire led;
 wire ready;
@@ -106,7 +110,7 @@ reg valid;
 reg latch;
 
 ws2812b ledstrip (
-  .clk20(clk20),      // 20 MHz input clock
+  .clk(clk),      // 20 MHz input clock
   .reset(boot_reset),
   .data_in(data),
   .valid(valid),
@@ -115,19 +119,25 @@ ws2812b ledstrip (
   .led(led)           // output signal to the LED strip
 );
 
-localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
-reg [1:0] state;
+
+// -------------- STATE MACHINE ---------------------------
 
 localparam NUM_CHARS = 8;
 localparam MAX_CHARS = 4;
-localparam CHAR_LEDS = 35;
-localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS; // 5x7 char matrix
+localparam CHAR_LEDS = 5 * 7; // 5x7 char matrix
+localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS;
+localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
+
+reg [1:0] state;
+reg [16:0] counter;
+reg [7:0] textbuf[0:MAX_CHARS];
+reg [3:0] colorbuf[0:3];
+reg [2:0] textbuf_index;
 reg [7:0] led_index;
 reg [5:0] char_led_index;
 reg [23:0] data;
-reg [16:0] counter;
 
-always @(posedge clk20) begin
+always @(posedge clk) begin
   if (boot_reset) begin
     led_index <= 0;
     char_led_index <= 0;
@@ -148,7 +158,7 @@ always @(posedge clk20) begin
         latch <= 0;
         char_index <= textbuf[textbuf_index];
         color_index <= colorbuf[textbuf_index];
-        if (&counter[16:0]) begin
+        if (&counter[16:0]) begin // trigger LED strip update
           state <= LOAD_DATA;
         end
       end
@@ -195,25 +205,12 @@ always @(posedge clk20) begin
   end
 end
 
-reg [7:0] textbuf[0:MAX_CHARS];
-reg [3:0] colorbuf[0:3];
-reg [2:0] textbuf_index;
 
-wire rng;
-reg [3:0] rnd_color; // 4-bit shift register
-always @(posedge clk20) begin
-  rnd_color <= {rnd_color[2:0], rng};
-end
-
-lfsr_rng lfsr(
-  .clk(clk20),
-  .reset(boot_reset),
-  .random_bit(rng)
-);
+// -------------- UART RX ---------------------------
 
 reg [2:0] digit_index;
 
-always @(posedge clk20) begin
+always @(posedge clk) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
     digit_index <= 0;
@@ -228,7 +225,7 @@ always @(posedge clk20) begin
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
       uart_rx_ready <= 1; 
-    end else begin        
+    end else begin // VALID & READY => process RX byte
       uart_rx_ready <= 0;
       textbuf[digit_index] <= uart_rx_data;
       colorbuf[digit_index] <= rnd_color;
