@@ -43,13 +43,13 @@ reg refresh_trigger = 0;
 
 always @(posedge clk20) begin
   counter <= counter + 1;
-  // trigger LED refresh every 2^16 ticks (~150 Hz)
-  refresh_trigger <= (&counter[15:0] == 1) ? 1 : 0;
+  // trigger LED refresh every 2^17 ticks (~75 Hz)
+  refresh_trigger <= (&counter[16:0] == 1) ? 1 : 0;
 end
 
-//wire uart_tx_en, uart_rx_en;
-wire uart_rx_en;
+//wire uart_tx_en;
 //assign uart_tx_en = 1;
+wire uart_rx_en;
 assign uart_rx_en = 1;
 
 // // UART TX
@@ -82,12 +82,12 @@ UARTReceiver #(
     .BAUD_RATE(9600)
 ) uart_rx_inst (
     .clk(clk20),
-    .reset(boot_reset),        // reset
+    .reset(boot_reset),       // reset
     .enable(uart_rx_en),      // RX enable
     .in(uart_rx),             // RX signal
     .ready(uart_rx_ready),    // ready to consume RX data
-    .out(uart_rx_data),       // RX wires
-    .valid(uart_rx_valid),    // RX completed
+    .out(uart_rx_data),       // RX byte
+    .valid(uart_rx_valid),    // RX byte is valid
     .error(uart_rx_error),    // RX error
     .overrun(uart_rx_overrun) // RX overrun
 );
@@ -110,27 +110,28 @@ color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) col_rom (
 );
 
 wire led;
-reg valid;
 wire ready;
+reg valid;
 reg latch;
 
 ws2812b ledstrip (
-  .clk20(clk20),            // 20 MHz input clock
+  .clk20(clk20),      // 20 MHz input clock
   .reset(boot_reset),
   .data_in(data),
   .valid(valid),
   .latch(latch),
   .ready(ready),
-  .led(led)                 // Output signal to the LED strip
+  .led(led)           // output signal to the LED strip
 );
 
 localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
-reg [2:0] state;
+reg [1:0] state;
 
 localparam NUM_CHARS = 4;
-localparam NUM_LEDS = NUM_CHARS * 35; // 5x7 char matrix
+localparam CHAR_LEDS = 35;
+localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS; // 5x7 char matrix
 reg [7:0] led_index;
-reg [7:0] char_led_index;
+reg [5:0] char_led_index;
 reg [23:0] data;
 
 always @(posedge clk20) begin
@@ -168,7 +169,7 @@ always @(posedge clk20) begin
         if (ready) begin
           valid <= 1;
 
-          if (char_led_index < 35-1) begin
+          if (char_led_index < CHAR_LEDS-1) begin
             char_led_index <= char_led_index + 1;
           end else begin
             char_led_index <= 0;
@@ -200,8 +201,7 @@ end
 
 reg [7:0] textbuf[0:3];
 reg [3:0] colorbuf[0:3];
-reg [3:0] textbuf_index;
-
+reg [2:0] textbuf_index;
 
 wire rng;
 reg [3:0] rnd_color; // 4-bit shift register
@@ -221,14 +221,14 @@ always @(posedge clk20) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
     digit_index <= 0;
-    textbuf[0] <= 48;
-    textbuf[1] <= 49;
-    textbuf[2] <= 50;
-    textbuf[3] <= 51;
-    colorbuf[0] <= 0;
-    colorbuf[1] <= 1;
-    colorbuf[2] <= 2;
-    colorbuf[3] <= 3;
+    // textbuf[0] <= 48;
+    // textbuf[1] <= 49;
+    // textbuf[2] <= 50;
+    // textbuf[3] <= 51;
+    // colorbuf[0] <= 0;
+    // colorbuf[1] <= 1;
+    // colorbuf[2] <= 2;
+    // colorbuf[3] <= 3;
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
       uart_rx_ready <= 1; 
