@@ -1,6 +1,6 @@
 module char_rom #(
     parameter DATA_WIDTH = 35,     // Width of ROM data (35 bits for each character)
-    parameter ADDR_WIDTH = 7,      // Address width
+    parameter ADDR_WIDTH = 8,      // Address width
     parameter ADDR_MIN = 32,
     parameter ADDR_MAX = 126
 )(
