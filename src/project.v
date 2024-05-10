@@ -30,7 +30,7 @@ wire uart_rx;
 assign uart_rx = ui_in[3];
 
 // LED strip signal
-assign led = uo_out[0];
+assign uo_out[0] = ledstrip;
 
 // reset
 wire boot_reset;
@@ -52,7 +52,7 @@ reg         uart_rx_ready;
 UARTReceiver #(
     .CLOCK_RATE(20000000),
     .BAUD_RATE(9600)
-) uart_rx_inst (
+) UARTReceiver_inst (
     .clk(clk),
     .reset(boot_reset),       // reset
     .enable(uart_rx_en),      // RX enable
@@ -90,7 +90,7 @@ color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) col_rom (
 
 wire rng;
 
-lfsr_rng lfsr(
+lfsr_rng lfsr_rng_inst (
   .clk(clk),
   .reset(boot_reset),
   .random_bit(rng)
@@ -104,103 +104,103 @@ end
 
 // -------------- WS2812B LED STRIP ---------------------------
 
-wire led;
-wire ready;
-reg valid;
-reg latch;
+wire [23:0] ledstrip_data;
+reg ledstrip_valid;
+wire ledstrip_latch;
+wire ledstrip_ready;
+wire ledstrip;
 
-ws2812b ledstrip (
+ws2812b ws2812b_inst (
   .clk20(clk),      // 20 MHz input clock
   .reset(boot_reset),
-  .data_in(data),
-  .valid(valid),
-  .latch(latch),
-  .ready(ready),
-  .led(led)           // output signal to the LED strip
+  .data_in(ledstrip_data),
+  .valid(ledstrip_valid),
+  .latch(ledstrip_latch),
+  .ready(ledstrip_ready),
+  .led(ledstrip)           // output signal to the LED strip
 );
 
 
 // -------------- STATE MACHINE ---------------------------
 
-localparam NUM_CHARS = 8;
-localparam MAX_CHARS = 4;
+localparam MAX_CHARS = 8;
+localparam NUM_CHARS = 4;
 localparam CHAR_LEDS = 5 * 7; // 5x7 char matrix
 localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS;
-localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
 
+// state machine
+localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
 reg [1:0] state;
-reg [16:0] counter;
-reg [7:0] textbuf[0:MAX_CHARS];
-reg [3:0] colorbuf[0:MAX_CHARS];
+
+// character and color buffers
+reg [7:0] textbuf[0:MAX_CHARS-1];
+reg [3:0] colorbuf[0:MAX_CHARS-1];
+
+// character generation logic
+assign ledstrip_data = (char_data[char_led_index]) ? color_data : 24'b0;
+assign ledstrip_latch = (led_index == (NUM_LEDS - 1)) ? 1 : 0;
+
 reg [2:0] textbuf_index;
-reg [7:0] led_index;
+reg [8:0] led_index;
 reg [5:0] char_led_index;
-reg [23:0] data;
+
+reg [16:0] counter;
 
 always @(posedge clk) begin
   if (boot_reset) begin
     led_index <= 0;
     char_led_index <= 0;
-    data <= 24'b0;
+    textbuf_index <= 0;
     state <= IDLE;
-    valid <= 0;
-    latch <= 0;
-    counter <= 0 ;
+    ledstrip_valid <= 0;
+    counter <= 0;
   end else begin
     counter <= counter + 1;
-
+    
     case (state)
       IDLE: begin
         led_index <= 0;
         char_led_index <= 0;
         textbuf_index <= 0;
-        valid <= 0;
-        latch <= 0;
-        char_index <= textbuf[textbuf_index];
-        color_index <= colorbuf[textbuf_index];
-        if (&counter[16:0]) begin // trigger LED strip update
+        ledstrip_valid <= 0;
+        if (&counter[16:0]) begin
           state <= LOAD_DATA;
         end
       end
 
       LOAD_DATA: begin
-        data <= (char_data[char_led_index]) ? color_data : 24'b0;
-
-        latch <= (led_index == NUM_LEDS - 1) ? 1 : 0;
-
+        char_index <= textbuf[textbuf_index];
+        color_index <= colorbuf[textbuf_index];
         state <= WAIT_READY;
       end
 
       WAIT_READY: begin
-        if (ready) begin
-          valid <= 1;
+        if (ledstrip_ready) begin
+          ledstrip_valid <= 1;
+          state <= WAIT_STARTED;
+        end
+      end
+
+      WAIT_STARTED: begin
+        if (!ledstrip_ready) begin
+          ledstrip_valid <= 0;
 
           if (char_led_index < CHAR_LEDS-1) begin
             char_led_index <= char_led_index + 1;
           end else begin
             char_led_index <= 0;
             textbuf_index <= textbuf_index + 1;
-            char_index <= textbuf[textbuf_index + 1];
-            color_index <= colorbuf[textbuf_index + 1];
           end
 
           led_index <= led_index + 1;
-
-          state <= WAIT_STARTED;
-        end
-      end
-
-      WAIT_STARTED: begin
-        if (!ready) begin
-          valid <= 0;
-
-          if (led_index < NUM_LEDS) begin
+          if (led_index < NUM_LEDS - 1) begin
             state <= LOAD_DATA;
           end else begin
             state <= IDLE;
           end
         end
       end
+
     endcase
   end
 end
@@ -229,7 +229,7 @@ always @(posedge clk) begin
       uart_rx_ready <= 0;
       textbuf[digit_index] <= uart_rx_data;
       colorbuf[digit_index] <= rnd_color;
-      if (digit_index == 3) begin
+      if (digit_index == NUM_CHARS-1) begin
         digit_index <= 0;
       end else begin
         digit_index <= digit_index + 1;
