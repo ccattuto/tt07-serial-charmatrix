@@ -75,6 +75,7 @@ module UARTReceiver #(
             data <= 8'b0;
             out_latched <= 0;
             state <= RESET;
+            rxCounter <= 0;
         end else if (rxCounter < (RX_PERIOD_COUNT - 1)) begin
             // RX baud generation
             rxCounter <= rxCounter + 1;
