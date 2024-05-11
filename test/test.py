@@ -30,6 +30,7 @@ async def test_project(dut):
     dut.rst_n.value = 0
     await Timer(1, units="us")
     dut.rst_n.value = 1
+    await Timer(100, units="ns")
 
     assert led.value == 0
 
