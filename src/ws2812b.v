@@ -27,21 +27,19 @@ module ws2812b (
   localparam [15:0] CYCLES_T1L = CYCLES_PERIOD - CYCLES_T1H;
   localparam [15:0] CYCLES_RESET = $floor(CLOCK_FREQ * RES_DELAY);
 
+  // state machine
+  parameter IDLE = 0, START = 1, SEND_BIT = 2, RESET = 3;
+  reg [1:0] state;
 
   reg [4:0] bitpos;
   reg [15:0] time_counter;
-  reg will_latch;
-
-  // state machine
-  parameter IDLE = 0, START = 1, SEND_BIT = 2, RESET = 3;
-  reg [1:0] state = IDLE;
-
   reg [23:0] data;
+  reg will_latch;
 
   // State machine logic
   always @(posedge clk20) begin
     if (reset) begin
-      state <= IDLE;
+      state <= RESET;
       bitpos <= 0;
       time_counter <= 0;
       led <= 0;
@@ -61,6 +59,7 @@ module ws2812b (
             state <= START;
           end
         end
+
         START: begin
           // Initialize for sending data
           state <= SEND_BIT;
@@ -69,6 +68,7 @@ module ws2812b (
           led <= 1;
           ready <= 0;
         end
+
         SEND_BIT: begin
           if (time_counter < CYCLES_PERIOD - 1) begin
             // Continue sending current bit
@@ -88,6 +88,7 @@ module ws2812b (
             led <= 0;
           end
         end
+
         RESET: begin
           if (time_counter < CYCLES_RESET) begin
             // Continue reset pulse
@@ -96,6 +97,10 @@ module ws2812b (
             // Reset complete, return to idle
             state <= IDLE;
           end
+        end
+
+        default: begin
+          state <= RESET;
         end
       endcase
     end
