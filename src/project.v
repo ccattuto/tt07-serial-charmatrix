@@ -70,7 +70,7 @@ UARTReceiver #(
 reg [7:0] char_index;
 wire [34:0] char_data;
 
-char_rom #(.DATA_WIDTH(35), .ADDR_WIDTH(8)) led_rom (
+char_rom #(.DATA_WIDTH(35), .ADDR_WIDTH(8)) char_rom_inst (
     .address(char_index),
     .data(char_data)
 );
@@ -80,7 +80,7 @@ char_rom #(.DATA_WIDTH(35), .ADDR_WIDTH(8)) led_rom (
 reg [3:0] color_index;
 wire [23:0] color_data;
 
-color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) col_rom (
+color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) color_rom_inst (
     .address(color_index),
     .data(color_data)
 );
@@ -96,7 +96,8 @@ lfsr_rng lfsr_rng_inst (
   .random_bit(rng)
 );
 
-reg [3:0] rnd_color; // 4-bit shift register
+// 4-bit shift register, used as index in color ROM (16 different colors)
+reg [3:0] rnd_color;
 always @(posedge clk) begin
   rnd_color <= {rnd_color[2:0], rng};
 end
@@ -140,14 +141,16 @@ reg [3:0] colorbuf[0:MAX_CHARS-1];
 assign ledstrip_data = (char_data[char_led_index]) ? color_data : 24'b0;
 assign ledstrip_latch = (led_index == (NUM_LEDS - 1)) ? 1 : 0;
 
-reg [2:0] textbuf_index;
+reg [$clog2(MAX_CHARS)-1:0] textbuf_index;
 reg [8:0] led_index;
 reg [5:0] char_led_index;
 
-reg [16:0] counter;
+reg [15:0] counter; // FIX BACK TO 17
 
 always @(posedge clk) begin
   if (boot_reset) begin
+    char_index <= 0;
+    color_index <= 0;
     led_index <= 0;
     char_led_index <= 0;
     textbuf_index <= 0;
@@ -156,14 +159,14 @@ always @(posedge clk) begin
     counter <= 0;
   end else begin
     counter <= counter + 1;
-    
+
     case (state)
       IDLE: begin
         led_index <= 0;
         char_led_index <= 0;
         textbuf_index <= 0;
         ledstrip_valid <= 0;
-        if (&counter[16:0]) begin
+        if (&counter) begin // trigger refresh (75 Hz)
           state <= LOAD_DATA;
         end
       end
@@ -201,6 +204,10 @@ always @(posedge clk) begin
         end
       end
 
+      default: begin
+        state <= IDLE;
+      end
+
     endcase
   end
 end
@@ -208,20 +215,25 @@ end
 
 // -------------- UART RX ---------------------------
 
-reg [2:0] digit_index;
+//integer i;
+reg [$clog2(MAX_CHARS)-1:0] digit_index;
 
 always @(posedge clk) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
     digit_index <= 0;
-    // textbuf[0] <= 48;
-    // textbuf[1] <= 49;
-    // textbuf[2] <= 50;
-    // textbuf[3] <= 51;
-    // colorbuf[0] <= 0;
-    // colorbuf[1] <= 1;
-    // colorbuf[2] <= 2;
-    // colorbuf[3] <= 3;
+    textbuf[0] <= 48;
+    textbuf[1] <= 49;
+    textbuf[2] <= 50;
+    textbuf[3] <= 51;
+    colorbuf[0] <= 0;
+    colorbuf[1] <= 1;
+    colorbuf[2] <= 2;
+    colorbuf[3] <= 3;
+    // for (i=0; i < NUM_CHARS; i=i+1) begin
+    //   textbuf[i] <= 8'b0;
+    //   colorbuf[i] <= 4'b0;
+    // end
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
       uart_rx_ready <= 1; 
