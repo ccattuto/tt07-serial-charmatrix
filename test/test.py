@@ -86,13 +86,32 @@ async def test_project(dut):
 
 # helpers
 
-char_rom = [s.strip()[::-1] for s in open('font.bin').readlines()]
+CHAR_ROM = [s.strip()[::-1] for s in open('font.bin').readlines()]
 def get_char_bitmap(c):
     if c >= 32 and c <= 126:
         i = c - 32
     else:
         i = -1
-    return char_rom[i]
+    return CHAR_ROM[i]
+
+VALID_COLORS = [
+    "000000001100110000000000",
+    "010011001100110000000000",
+    "100110011100110000000000",
+    "110011001011001000000000",
+    "110011000110011000000000",
+    "110011000001100100000000",
+    "110011000000000000110011",
+    "110011000000000001111111",
+    "110011000000000011001100",
+    "011111110000000011001100",
+    "001100110000000011001100",
+    "000000000001100111001100",
+    "000000000110011011001100",
+    "000000001011001011001100",
+    "000000001100110010011001",
+    "000000001100110001001100"
+]
 
 async def do_tx(uart_rx, baud, data):
     # prepare random test data
@@ -116,8 +135,9 @@ async def get_char(dut, led):
             cseq.append(0)
         dut._log.info(f"{count}: {bitseq}")
 
-    # same color for all LEDS in a given character
+    # same color for all LEDS in a given character, and a valid color
     assert len(color_set) == 1
+    assert list(color_set)[0] in VALID_COLORS
 
     # print character
     print()
