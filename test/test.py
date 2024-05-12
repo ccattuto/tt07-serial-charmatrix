@@ -9,7 +9,7 @@ from cocotb.utils import get_sim_time
 import random
 
 
-@cocotb.test(timeout_time=25, timeout_unit='ms')
+@cocotb.test(timeout_time=50, timeout_unit='ms')
 async def test_project(dut):
     dut._log.info("Start")
 
@@ -40,16 +40,25 @@ async def test_project(dut):
     c4 = await get_char(dut, led)
 
     await Timer(1.2, units="ms")
-    await do_tx(uart_rx, 9600, ord('A'))
-    #await Edge(dut.user_project.uart_rx_ready)
-    #assert dut.user_project.uart_rx_ready.value == 1
+    await do_tx(uart_rx, 9600, ord('C'))
+
+    await Timer(0.3, units="ms")
+    await do_tx(uart_rx, 9600, ord('i'))
+    await do_tx(uart_rx, 9600, ord('r'))
 
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
 
+    await do_tx(uart_rx, 9600, ord('o'))
+    await do_tx(uart_rx, 9600, ord('X'))
 
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
+    c3 = await get_char(dut, led)
+    c4 = await get_char(dut, led)
+ 
 async def do_tx(uart_rx, baud, data):
     # prepare random test data
     TEST_BITS_LSB = [(data >> s) & 1 for s in range(8)]
@@ -79,7 +88,7 @@ async def get_24bits(dut, led):
         while led.value == 0:
             await Edge(dut.uo_out)
         t1 = get_sim_time('ns')
-        
+
         while led.value == 1:
             await Edge(dut.uo_out)
         t2 = get_sim_time('ns')

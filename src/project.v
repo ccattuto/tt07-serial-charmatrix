@@ -145,7 +145,7 @@ reg [$clog2(MAX_CHARS)-1:0] textbuf_index;
 reg [8:0] led_index;
 reg [5:0] char_led_index;
 
-reg [15:0] counter; // FIX BACK TO 17
+reg [17:0] counter;
 
 always @(posedge clk) begin
   if (boot_reset) begin
@@ -215,25 +215,25 @@ end
 
 // -------------- UART RX ---------------------------
 
-//integer i;
+integer i;
 reg [$clog2(MAX_CHARS)-1:0] digit_index;
 
 always @(posedge clk) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
     digit_index <= 0;
-    textbuf[0] <= 48;
-    textbuf[1] <= 49;
-    textbuf[2] <= 50;
-    textbuf[3] <= 51;
-    colorbuf[0] <= 0;
-    colorbuf[1] <= 1;
-    colorbuf[2] <= 2;
-    colorbuf[3] <= 3;
-    // for (i=0; i < NUM_CHARS; i=i+1) begin
-    //   textbuf[i] <= 8'b0;
-    //   colorbuf[i] <= 4'b0;
-    // end
+    // textbuf[0] <= 48;
+    // textbuf[1] <= 49;
+    // textbuf[2] <= 50;
+    // textbuf[3] <= 51;
+    // colorbuf[0] <= 0;
+    // colorbuf[1] <= 1;
+    // colorbuf[2] <= 2;
+    // colorbuf[3] <= 3;
+    for (i=0; i < NUM_CHARS; i=i+1) begin
+      textbuf[i] <= 8'b0;
+      colorbuf[i] <= 4'b0;
+    end
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
       uart_rx_ready <= 1; 
