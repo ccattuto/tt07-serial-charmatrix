@@ -16,6 +16,7 @@ project:
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
   source_files:        
     - "UARTReceiver.v"
+    - "UARTTransmitter.v"
     - "lfsr_rng.v"
     - "char_rom.v"
     - "color_rom.v"
@@ -28,7 +29,7 @@ pinout:
   # Inputs
   ui[0]: "config selector 0"
   ui[1]: "config selector 1"
-  ui[2]: ""
+  ui[2]: "UART loopback option"
   ui[3]: "UART RX"
   ui[4]: ""
   ui[5]: ""
@@ -40,7 +41,7 @@ pinout:
   uo[1]: ""
   uo[2]: ""
   uo[3]: ""
-  uo[4]: ""
+  uo[4]: "UART TX"
   uo[5]: ""
   uo[6]: ""
   uo[7]: ""

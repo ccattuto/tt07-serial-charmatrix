@@ -22,12 +22,16 @@ module tt_um_ccattuto_charmatrix (
 // All output pins must be assigned. If not used, assign to 0.
 assign uio_out = 0;
 assign uio_oe  = 0;
-assign uo_out[4:1] = 0;
+assign uo_out[3:1] = 0;
 assign uo_out[7:5] = 0;
 
-// UART receiver
+// UART RX
 wire uart_rx;
 assign uart_rx = ui_in[3];
+
+// UART TX
+wire uart_tx;
+assign uo_out[4] = uart_tx;
 
 // LED strip signal
 assign uo_out[0] = ledstrip;
@@ -35,6 +39,9 @@ assign uo_out[0] = ledstrip;
 // configuration selector
 wire [1:0] config_sel;
 assign config_sel = ui_in[1:0];
+
+// UART loopback config
+assign uart_tx_en = ui_in[2];
 
 // reset
 wire boot_reset;
@@ -55,7 +62,7 @@ config_rom config_rom_inst (
 
 // -------------- UART RECEIVER ---------------------------
 
-wire uart_rx_en;
+wire uart_rx_en, uart_tx_en;
 assign uart_rx_en = 1;
 
 // UART RX
@@ -80,6 +87,24 @@ UARTReceiver #(
     .overrun(uart_rx_overrun) // RX overrun
 );
 
+
+// -------------- UART TRANSMITTER ---------------------------
+
+reg         uart_tx_valid;
+wire        uart_tx_ready;
+
+UARTTransmitter #(
+    .CLOCK_RATE(20000000),
+    .BAUD_RATE(9600)
+) UARTTransmitter_inst (
+    .clk(clk),
+    .reset(boot_reset),       // reset
+    .enable(uart_tx_en),      // TX enable
+    .valid(uart_tx_valid),    // start of TX
+    .in(uart_rx_data),        // data to transmit - LOOPBACK
+    .out(uart_tx),            // TX signal
+    .ready(uart_tx_ready)     // read for TX data
+);
 
 // -------------- CHARACTER ROM ---------------------------
 
@@ -239,6 +264,7 @@ reg [$clog2(MAX_CHARS)-1:0] textbuf_base;
 always @(posedge clk) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
+    uart_tx_valid <= 0;
     textbuf_base <= 0;
     for (i=0; i < MAX_CHARS; i=i+1) begin
       textbuf[i] <= 8'b0;
@@ -246,9 +272,13 @@ always @(posedge clk) begin
     end
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
-      uart_rx_ready <= 1; 
+      uart_rx_ready <= 1;
+      if (uart_tx_valid & uart_tx_ready) begin
+        uart_tx_valid <= 0;
+      end
     end else begin // VALID & READY => process RX byte
       uart_rx_ready <= 0;
+      uart_tx_valid <= 1; // start TX
       textbuf[textbuf_base] <= uart_rx_data;
       colorbuf[textbuf_base] <= rnd_color;
       if (textbuf_base < num_chars) begin

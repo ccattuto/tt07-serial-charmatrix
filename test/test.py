@@ -27,6 +27,8 @@ async def test_4chars(dut):
     # config: 4 chars
     dut.ui_in[0].value = 1
     dut.ui_in[1].value = 0
+    # config: no UART loopback
+    dut.ui_in[2].value = 0
 
     # GPIO OUT
     dut.uio_in.value = 0
@@ -109,6 +111,8 @@ async def test_2chars(dut):
     # config: 2 chars
     dut.ui_in[0].value = 0
     dut.ui_in[1].value = 0
+    # config: no UART loopback
+    dut.ui_in[2].value = 0
 
     # GPIO OUT
     dut.uio_in.value = 0
@@ -160,6 +164,47 @@ async def test_2chars(dut):
     assert(c2 == get_char_bitmap(ord('o')))
 
 
+@cocotb.test(timeout_time=50, timeout_unit='ms')
+async def test_uart_loopback(dut):
+    dut._log.info("Start")
+
+    # Set the clock period to 50 ns (20 MHz)
+    clock = Clock(dut.clk, 50, units="ns")
+    cocotb.start_soon(clock.start())
+
+    # signals
+    uart_rx = dut.ui_in[3]
+    uart_tx = dut.uo_out[4]
+
+    # GPIO IN
+    dut.ui_in.value = 0
+    uart_rx.value = 1 # keep RX high
+    # config: 2 chars
+    dut.ui_in[0].value = 0
+    dut.ui_in[1].value = 0
+    # config: UART loopback
+    dut.ui_in[2].value = 1
+
+    # GPIO OUT
+    dut.uio_in.value = 0
+
+     # reset
+    dut._log.info("Reset")
+    dut.ena.value = 1
+    dut.rst_n.value = 0
+    await Timer(1, units="us")
+    dut.rst_n.value = 1
+    await Timer(1, units="us")
+
+    await Timer(0.1, units="ms")
+    TEST_BYTE = 0xA5
+    await do_tx(uart_rx, 9600, TEST_BYTE)
+
+    rx_byte = await do_rx(dut, uart_tx, 9600)
+    assert rx_byte == TEST_BYTE
+
+
+
 # HELPER FUNCTIONS
 
 CHAR_ROM = [s.strip()[::-1] for s in open('font.bin').readlines()]
@@ -197,6 +242,27 @@ async def do_tx(uart_rx, baud, data):
     for tx_bit in [0] + TEST_BITS_LSB + [1]:
         uart_rx.value = tx_bit
         await Timer(int(1.0 / baud * 1e12), units="ps")
+
+async def do_rx(dut, uart_tx, baud):
+    await Edge(dut.uo_out)
+    assert uart_tx.value == 0
+
+    # wait 1/2 bit
+    await Timer(int(0.5 / baud * 1e12), units="ps")
+    # check start bit
+    assert uart_tx.value == 0
+
+    # 8 data bits
+    data = 0
+    for i in range(8):
+        await Timer(int(1.0 / baud * 1e12), units="ps")
+        data = (data << 1) | (1 if uart_tx.value == 1 else 0)
+
+    # check stop bit
+    await Timer(int(1.0 / baud * 1e12), units="ps")
+    assert uart_tx.value == 1
+
+    return data
 
 # read 5x7 character
 async def get_char(dut, led):
@@ -257,4 +323,4 @@ async def check_reset(dut, led):
         
         assert did_timeout
         assert led.value == 0
-    
+
