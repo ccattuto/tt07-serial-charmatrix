@@ -32,9 +32,25 @@ assign uart_rx = ui_in[3];
 // LED strip signal
 assign uo_out[0] = ledstrip;
 
+// configuration selector
+wire [1:0] config_sel;
+assign config_sel = ui_in[1:0];
+
 // reset
 wire boot_reset;
 assign boot_reset = ~rst_n;
+
+
+// -------------- CONFIG ROM -----------------------------
+
+wire [2:0] num_chars;
+wire [8:0] num_leds;
+
+config_rom config_rom_inst (
+    .sel(config_sel),
+    .num_chars(num_chars),
+    .num_leds(num_leds)
+);
 
 
 // -------------- UART RECEIVER ---------------------------
@@ -125,9 +141,7 @@ ws2812b ws2812b_inst (
 // -------------- STATE MACHINE ---------------------------
 
 localparam MAX_CHARS = 8;
-localparam NUM_CHARS = 4;
 localparam CHAR_LEDS = 5 * 7; // 5x7 char matrix
-localparam NUM_LEDS = NUM_CHARS * CHAR_LEDS;
 
 // state machine
 localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
@@ -139,7 +153,7 @@ reg [3:0] colorbuf[0:MAX_CHARS-1];
 
 // character generation logic
 assign ledstrip_data = (char_data[char_led_index]) ? color_data : 24'b0;
-assign ledstrip_latch = (led_index == (NUM_LEDS - 1)) ? 1 : 0;
+assign ledstrip_latch = (led_index == num_leds) ? 1 : 0;
 
 reg [$clog2(MAX_CHARS)-1:0] textbuf_index;
 reg [8:0] led_index;
@@ -192,7 +206,7 @@ always @(posedge clk) begin
             char_led_index <= char_led_index + 1;
           end else begin
             char_led_index <= 0;
-            if (textbuf_index < NUM_CHARS-1) begin
+            if (textbuf_index < num_chars) begin
               textbuf_index <= textbuf_index + 1;
             end else begin
               textbuf_index <= 0;
@@ -200,7 +214,7 @@ always @(posedge clk) begin
           end
 
           led_index <= led_index + 1;
-          if (led_index < NUM_LEDS - 1) begin
+          if (led_index < num_leds) begin
             state <= LOAD_DATA;
           end else begin
             state <= IDLE;
@@ -237,7 +251,7 @@ always @(posedge clk) begin
       uart_rx_ready <= 0;
       textbuf[textbuf_base] <= uart_rx_data;
       colorbuf[textbuf_base] <= rnd_color;
-      if (textbuf_base < NUM_CHARS-1) begin
+      if (textbuf_base < num_chars) begin
         textbuf_base <= textbuf_base + 1;
       end else begin
         textbuf_base <= 0;

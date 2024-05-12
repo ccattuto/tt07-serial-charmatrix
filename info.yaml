@@ -19,14 +19,15 @@ project:
     - "lfsr_rng.v"
     - "char_rom.v"
     - "color_rom.v"
+    - "config_rom.v"
     - "ws2812b.v"
     - "project.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
+  ui[0]: "config selector 0"
+  ui[1]: "config selector 1"
   ui[2]: ""
   ui[3]: "UART RX"
   ui[4]: ""
