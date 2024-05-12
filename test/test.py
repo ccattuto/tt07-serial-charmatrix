@@ -34,31 +34,63 @@ async def test_project(dut):
 
     assert led.value == 0
 
+    # wait for LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
 
+    assert(c1 == get_char_bitmap(0))
+    assert(c2 == get_char_bitmap(0))
+    assert(c3 == get_char_bitmap(0))
+    assert(c4 == get_char_bitmap(0))
+
+    # send byte over UART
     await Timer(1.2, units="ms")
     await do_tx(uart_rx, 9600, ord('C'))
 
+    # send two more bytes over UART
     await Timer(0.3, units="ms")
     await do_tx(uart_rx, 9600, ord('i'))
     await do_tx(uart_rx, 9600, ord('r'))
 
+    # wait for LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
 
+    assert(c1 == get_char_bitmap(0))
+    assert(c2 == get_char_bitmap(ord('C')))
+    assert(c3 == get_char_bitmap(ord('i')))
+    assert(c4 == get_char_bitmap(ord('r')))
+
+    # send two more bytes over UART
     await do_tx(uart_rx, 9600, ord('o'))
     await do_tx(uart_rx, 9600, ord('X'))
 
+    # wait for LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
- 
+
+    assert(c1 == get_char_bitmap(ord('i')))
+    assert(c2 == get_char_bitmap(ord('r')))
+    assert(c3 == get_char_bitmap(ord('o')))
+    assert(c4 == get_char_bitmap(ord('X')))
+
+
+# helpers
+
+char_rom = [s.strip()[::-1] for s in open('font.bin').readlines()]
+def get_char_bitmap(c):
+    if c >= 32 and c <= 126:
+        i = c - 32
+    else:
+        i = -1
+    return char_rom[i]
+
 async def do_tx(uart_rx, baud, data):
     # prepare random test data
     TEST_BITS_LSB = [(data >> s) & 1 for s in range(8)]
@@ -68,20 +100,35 @@ async def do_tx(uart_rx, baud, data):
         uart_rx.value = tx_bit
         await Timer(int(1.0 / baud * 1e12), units="ps")
 
+
+# read 5x7 character
 async def get_char(dut, led):
     cseq = []
+    color_set = set()
     for count in range(35):
-        bitseq = await get_24bits(dut, led)
+        bitseq = await get_GRB(dut, led)
+        if sum(bitseq):
+            cseq.append(1)
+            color_set.add("".join([str(x) for x in bitseq]))
+        else:
+            cseq.append(0)
         dut._log.info(f"{count}: {bitseq}")
-        cseq.append( 0 if sum(bitseq) == 0 else 1 )
 
+    # same color for all LEDS in a given character
+    assert len(color_set) == 1
+
+    # print character
+    print()
     for i in range(7):
         linestring = "".join(["O" if x==1 else "." for x in cseq[i*5:(i+1)*5]])
         dut._log.info(linestring)
+    print()
 
     return "".join([str(x) for x in cseq])
-        
-async def get_24bits(dut, led):
+
+
+# read 24 color bits (G / R / B)
+async def get_GRB(dut, led):
     bitseq = []
 
     for i in range(24):
@@ -94,13 +141,15 @@ async def get_24bits(dut, led):
         t2 = get_sim_time('ns')
 
         pulse_ns = t2-t1
+        # check pulse duration
         assert(pulse_ns > 300)
         assert(pulse_ns < 900)
-        #dut._log.info(pulse_ns)
 
+        # decode bit
         bitseq.append( 1 if (pulse_ns > 625) else 0 )
 
     return bitseq
+
 
 async def ledreset(dut, led):
     reset_detected = 0

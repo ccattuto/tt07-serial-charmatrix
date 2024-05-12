@@ -164,7 +164,7 @@ always @(posedge clk) begin
       IDLE: begin
         led_index <= 0;
         char_led_index <= 0;
-        textbuf_index <= 0;
+        textbuf_index <= textbuf_base;
         ledstrip_valid <= 0;
         if (&counter) begin // trigger refresh (75 Hz)
           state <= LOAD_DATA;
@@ -192,7 +192,11 @@ always @(posedge clk) begin
             char_led_index <= char_led_index + 1;
           end else begin
             char_led_index <= 0;
-            textbuf_index <= textbuf_index + 1;
+            if (textbuf_index < NUM_CHARS-1) begin
+              textbuf_index <= textbuf_index + 1;
+            end else begin
+              textbuf_index <= 0;
+            end
           end
 
           led_index <= led_index + 1;
@@ -216,21 +220,13 @@ end
 // -------------- UART RX ---------------------------
 
 integer i;
-reg [$clog2(MAX_CHARS)-1:0] digit_index;
+reg [$clog2(MAX_CHARS)-1:0] textbuf_base;
 
 always @(posedge clk) begin
   if (boot_reset) begin
     uart_rx_ready <= 0;
-    digit_index <= 0;
-    // textbuf[0] <= 48;
-    // textbuf[1] <= 49;
-    // textbuf[2] <= 50;
-    // textbuf[3] <= 51;
-    // colorbuf[0] <= 0;
-    // colorbuf[1] <= 1;
-    // colorbuf[2] <= 2;
-    // colorbuf[3] <= 3;
-    for (i=0; i < NUM_CHARS; i=i+1) begin
+    textbuf_base <= 0;
+    for (i=0; i < MAX_CHARS; i=i+1) begin
       textbuf[i] <= 8'b0;
       colorbuf[i] <= 4'b0;
     end
@@ -239,12 +235,12 @@ always @(posedge clk) begin
       uart_rx_ready <= 1; 
     end else begin // VALID & READY => process RX byte
       uart_rx_ready <= 0;
-      textbuf[digit_index] <= uart_rx_data;
-      colorbuf[digit_index] <= rnd_color;
-      if (digit_index == NUM_CHARS-1) begin
-        digit_index <= 0;
+      textbuf[textbuf_base] <= uart_rx_data;
+      colorbuf[textbuf_base] <= rnd_color;
+      if (textbuf_base < NUM_CHARS-1) begin
+        textbuf_base <= textbuf_base + 1;
       end else begin
-        digit_index <= digit_index + 1;
+        textbuf_base <= 0;
       end
     end
   end
