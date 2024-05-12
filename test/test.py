@@ -39,6 +39,7 @@ async def test_project(dut):
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
+    await check_reset(dut, led)
 
     assert(c1 == get_char_bitmap(0))
     assert(c2 == get_char_bitmap(0))
@@ -59,6 +60,7 @@ async def test_project(dut):
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
+    await check_reset(dut, led)
 
     assert(c1 == get_char_bitmap(0))
     assert(c2 == get_char_bitmap(ord('C')))
@@ -74,6 +76,7 @@ async def test_project(dut):
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
+    await check_reset(dut, led)
 
     assert(c1 == get_char_bitmap(ord('i')))
     assert(c2 == get_char_bitmap(ord('r')))
@@ -100,7 +103,6 @@ async def do_tx(uart_rx, baud, data):
         uart_rx.value = tx_bit
         await Timer(int(1.0 / baud * 1e12), units="ps")
 
-
 # read 5x7 character
 async def get_char(dut, led):
     cseq = []
@@ -126,7 +128,6 @@ async def get_char(dut, led):
 
     return "".join([str(x) for x in cseq])
 
-
 # read 24 color bits (G / R / B)
 async def get_GRB(dut, led):
     bitseq = []
@@ -150,14 +151,14 @@ async def get_GRB(dut, led):
 
     return bitseq
 
-
-async def ledreset(dut, led):
-    reset_detected = 0
-    while not reset_detected:
-        while led.value == 1:
-            await Edge(dut.uo_out)
+async def check_reset(dut, led):
+        did_timeout = False
+        assert led.value == 0
         try:
             await with_timeout(Edge(dut.uo_out), 50, 'us')
         except cocotb.result.SimTimeoutError:
-            reset_detected = 1
+            did_timeout = True
+        
+        assert did_timeout
+        assert led.value == 0
     
