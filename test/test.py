@@ -5,7 +5,7 @@ import cocotb
 from cocotb.clock import Clock
 import cocotb.result
 from cocotb.triggers import Timer, Edge, with_timeout
-import cocotb.simulator as simulator
+from cocotb.utils import get_sim_time
 import random
 
 
@@ -30,7 +30,7 @@ async def test_project(dut):
     dut.rst_n.value = 0
     await Timer(1, units="us")
     dut.rst_n.value = 1
-    await Timer(100, units="ns")
+    await Timer(1, units="us")
 
     assert led.value == 0
 
@@ -78,18 +78,18 @@ async def get_24bits(dut, led):
     for i in range(24):
         while led.value == 0:
             await Edge(dut.uo_out)
-        th1, tl1 = simulator.get_sim_time()
-
+        t1 = get_sim_time('ns')
+        
         while led.value == 1:
             await Edge(dut.uo_out)
-        th2, tl2 = simulator.get_sim_time()
+        t2 = get_sim_time('ns')
 
-        pulse_us = (tl2-tl1) / 1000
-        assert(pulse_us > 300)
-        assert(pulse_us < 900)
-        #dut._log.info(pulse_us)
+        pulse_ns = t2-t1
+        assert(pulse_ns > 300)
+        assert(pulse_ns < 900)
+        #dut._log.info(pulse_ns)
 
-        bitseq.append( 1 if (pulse_us > 625) else 0 )
+        bitseq.append( 1 if (pulse_ns > 625) else 0 )
 
     return bitseq
 
