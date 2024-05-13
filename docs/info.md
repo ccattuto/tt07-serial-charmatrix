@@ -24,7 +24,7 @@ The project is designed to demonstrate the underlying Verilog modules, which sho
 
 Basic setup:
 * Connect `uo[0]` to the input pin (`DATA_IN`) of a [Pixie Chroma](https://connornishijima.github.io/Pixie_Chroma/) LED-matrix display (two 5x7 WS2812B LED matrices). Ensure the `VCC` and `GND` pins are connected to an adequate power source.
-* Configure the inputt (e.g., using the DIP switches of the PCB) as follows: set `ui[0]` and `ui[1]` to `0` to use one Pixie Chrome (i.e., two 5x7 LED matrices); set `ui[2]` to `1` to enable UART echo; set `ui[4]` and `ui[5]` to disable LED dimming.
+* Configure the input (e.g., using the DIP switches of the PCB) as follows: set `ui[0]` and `ui[1]` to `0` to use one Pixie Chrome (i.e., two 5x7 LED matrices); set `ui[2]` to `1` to enable UART echo; set `ui[4]` and `ui[5]` to `0` to disable LED dimming.
 * Connect the UART interface of the project (RX is `ui[3]`, TX is `uo[4]`) to a serial terminal or a UART-to-USB PMOD or adapter (e.g., the one provided by the onboard RP2040 of the Tiny Tapeout PCB). Configure the serial interface for 9600 baud, 8 bits, 1 start bit, no parity bit, and 1 stop bit (8N1), with no hardware or software flow control.
 * Open the terminal and type any characters: printable ASCII characters will appear from the right-hand side on the LED matrix and shift left as more characters are typed. Each character will appear with a different random color. Non-printable ASCII characters are shown as an empty rectangle. Received characters are echoed on the serial connection when `ui[2]` is set to `1`.
 
