@@ -52,11 +52,13 @@ module ws2812b (
           bitpos <= 0;
           time_counter <= 0;
           led <= 0;
-          ready <= 1;
-          if (valid) begin
+          if (ready & valid) begin
             data <= data_in;
             will_latch <= latch;
+            ready <= 0;
             state <= START;
+          end else begin
+            ready <= 1;
           end
         end
 
