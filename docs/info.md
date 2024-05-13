@@ -15,9 +15,10 @@ Up to 4 chained devices are supported for a maximum of 8 characters. The display
 
 The project is designed to demonstrate the underlying Verilog modules, which should be easily re-usable:
  - WS2812B LED strip driver
- - UART receiver and transmitter
+ - UART receiver and transmitter (8N1 only, no flow control)
  - linear-feedback pseudo-random number generator
  - character ROM
+ The cocotb code to parse the WS2812B protocol might also be useful to others.
 
 
 ## How to test
