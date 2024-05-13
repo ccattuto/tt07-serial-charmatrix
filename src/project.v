@@ -180,7 +180,7 @@ localparam MAX_CHARS = 8;
 localparam CHAR_LEDS = 5 * 7; // 5x7 char matrix
 
 // state machine
-localparam IDLE = 0, LOAD_DATA = 1, WAIT_READY = 2, WAIT_STARTED = 3;
+localparam IDLE = 0, LATCH_CHAR = 1, DELAY = 2, WAIT_START = 3;
 reg [1:0] state;
 
 // character and color buffers
@@ -217,25 +217,28 @@ always @(posedge clk) begin
         textbuf_index <= textbuf_base;
         ledstrip_valid <= 0;
         if (&counter) begin // trigger refresh (75 Hz)
-          state <= LOAD_DATA;
+          state <= LATCH_CHAR;
         end
       end
 
-      LOAD_DATA: begin
-        char_index <= textbuf[textbuf_index];
-        color_index <= colorbuf[textbuf_index];
-        state <= WAIT_READY;
-      end
-
-      WAIT_READY: begin
-        if (ledstrip_ready) begin
-          ledstrip_valid <= 1;
-          state <= WAIT_STARTED;
+      LATCH_CHAR: begin
+        if (ledstrip_ready) begin         // wait for driver to become ready
+          if (char_led_index == 0) begin  // only latch at 1st pixel of character
+            char_index <= textbuf[textbuf_index];
+            color_index <= colorbuf[textbuf_index];
+          end
+          state <= DELAY;
         end
       end
 
-      WAIT_STARTED: begin
-        if (!ledstrip_ready) begin
+      DELAY: begin
+        // trigger LED strip driver and delay so that ledstrip_data settles
+        ledstrip_valid <= 1;
+        state <= WAIT_START;
+      end
+
+      WAIT_START: begin
+        if (!ledstrip_ready) begin  // wait for driver to start sending 
           ledstrip_valid <= 0;
 
           if (char_led_index < CHAR_LEDS-1) begin
@@ -251,7 +254,7 @@ always @(posedge clk) begin
 
           led_index <= led_index + 1;
           if (led_index < num_leds) begin
-            state <= LOAD_DATA;
+            state <= LATCH_CHAR;
           end else begin
             state <= IDLE;
           end
