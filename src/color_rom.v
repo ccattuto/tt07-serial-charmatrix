@@ -3,10 +3,19 @@ module color_rom #(
     parameter ADDR_WIDTH = 4       // Address width
 )(
     input wire [ADDR_WIDTH-1:0] address,
+    input wire [1:0] dimmer,
     output wire [DATA_WIDTH-1:0] data
 );
 
 reg [DATA_WIDTH-1:0] mem [0:2**ADDR_WIDTH-1];
+
+wire [2:0] dimshift;
+assign dimshift[0] = 0;
+assign dimshift[2:1] = dimmer;
+
+assign data =   (mem[address][23:16] >> dimshift) << 16 |
+                (mem[address][15:8]  >> dimshift) << 8  |
+                (mem[address][7:0]   >> dimshift);
 
 initial begin
     mem[0] = 24'b000000001100110000000000;
@@ -26,7 +35,5 @@ initial begin
     mem[14] = 24'b000000001100110010011001;
     mem[15] = 24'b000000001100110001001100;
 end
-
-assign data = mem[address];
 
 endmodule

@@ -27,24 +27,24 @@ project:
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: "config selector 0"
-  ui[1]: "config selector 1"
+  ui[0]: "num chars selector 0"
+  ui[1]: "num chars selector 1"
   ui[2]: "UART loopback option"
   ui[3]: "UART RX"
-  ui[4]: ""
-  ui[5]: ""
+  ui[4]: "dimmer selector 0"
+  ui[5]: "dimmer selector 1"
   ui[6]: ""
   ui[7]: ""
 
   # Outputs
   uo[0]: "LED strip"
-  uo[1]: ""
+  uo[1]: "LED strip latch"
   uo[2]: ""
   uo[3]: ""
   uo[4]: "UART TX"
   uo[5]: ""
   uo[6]: ""
-  uo[7]: ""
+  uo[7]: "UART RX valid"
 
   # Bidirectional pins
   uio[0]: ""

@@ -42,12 +42,16 @@ assign uo_out[0] = ledstrip;
 // LED strip latch signal
 assign uo_out[1] = ledstrip_latch;
 
-// configuration selector
+// number of characters selector
 wire [1:0] config_sel;
 assign config_sel = ui_in[1:0];
 
 // UART loopback config
 assign uart_tx_en = ui_in[2];
+
+// LED dimmer selector
+wire [1:0] dimmer_sel;
+assign dimmer_sel = ui_in[5:4];
 
 // reset
 wire boot_reset;
@@ -129,6 +133,7 @@ wire [23:0] color_data;
 
 color_rom #(.DATA_WIDTH(24), .ADDR_WIDTH(4)) color_rom_inst (
     .address(color_index),
+    .dimmer(dimmer_sel),
     .data(color_data)
 );
 
