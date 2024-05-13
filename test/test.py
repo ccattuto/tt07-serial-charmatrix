@@ -10,7 +10,7 @@ import random
 
 
 @cocotb.test(timeout_time=50, timeout_unit='ms')
-async def test_8chars(dut):
+async def test_2chars(dut):
     dut._log.info("Start")
 
     # Set the clock period to 50 ns (20 MHz)
@@ -24,9 +24,9 @@ async def test_8chars(dut):
     # GPIO IN
     dut.ui_in.value = 0
     uart_rx.value = 1 # keep RX high
-    # config: 8 chars
-    dut.ui_in[0].value = 1
-    dut.ui_in[1].value = 1
+    # config: 2 chars
+    dut.ui_in[0].value = 0
+    dut.ui_in[1].value = 0
     # config: no UART loopback
     dut.ui_in[2].value = 0
 
@@ -44,25 +44,40 @@ async def test_8chars(dut):
     assert led.value == 0
 
     # wait for LED matrix update
-    clist = []
-    for i in range(8):
-        clist.append( await get_char(dut, led) )
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
     await check_reset(dut, led)
-    assert clist == [get_char_bitmap(0)] * 8
 
-    # send 9 bytes over UART
-    for i in range(10):
-        await do_tx(uart_rx, 9600, ord('0') + i)
+    assert(c1 == get_char_bitmap(0))
+    assert(c2 == get_char_bitmap(0))
+    
+    # send byte over UART
+    await Timer(1.2, units="ms")
+    await do_tx(uart_rx, 9600, ord('C'))
 
-    await wait_reset(dut, led)
+    # send two more bytes over UART
+    await Timer(0.3, units="ms")
+    await do_tx(uart_rx, 9600, ord('i'))
+    await do_tx(uart_rx, 9600, ord('r'))
 
     # wait for LED matrix update
-    clist = []
-    for i in range(8):
-        clist.append( await get_char(dut, led) )
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
     await check_reset(dut, led)
 
-    assert clist == [get_char_bitmap(ord('2') + i) for i in range(8)]
+    assert(c1 == get_char_bitmap(ord('i')))
+    assert(c2 == get_char_bitmap(ord('r')))
+
+    # send two more bytes over UART
+    await do_tx(uart_rx, 9600, ord('o'))
+
+    # wait for LED matrix update
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
+    await check_reset(dut, led)
+
+    assert(c1 == get_char_bitmap(ord('r')))
+    assert(c2 == get_char_bitmap(ord('o')))
 
 
 @cocotb.test(timeout_time=50, timeout_unit='ms')
@@ -150,7 +165,7 @@ async def test_4chars(dut):
 
 
 @cocotb.test(timeout_time=50, timeout_unit='ms')
-async def test_2chars(dut):
+async def test_8chars(dut):
     dut._log.info("Start")
 
     # Set the clock period to 50 ns (20 MHz)
@@ -164,9 +179,9 @@ async def test_2chars(dut):
     # GPIO IN
     dut.ui_in.value = 0
     uart_rx.value = 1 # keep RX high
-    # config: 2 chars
-    dut.ui_in[0].value = 0
-    dut.ui_in[1].value = 0
+    # config: 8 chars
+    dut.ui_in[0].value = 1
+    dut.ui_in[1].value = 1
     # config: no UART loopback
     dut.ui_in[2].value = 0
 
@@ -184,40 +199,25 @@ async def test_2chars(dut):
     assert led.value == 0
 
     # wait for LED matrix update
-    c1 = await get_char(dut, led)
-    c2 = await get_char(dut, led)
+    clist = []
+    for i in range(8):
+        clist.append( await get_char(dut, led) )
     await check_reset(dut, led)
+    assert clist == [get_char_bitmap(0)] * 8
 
-    assert(c1 == get_char_bitmap(0))
-    assert(c2 == get_char_bitmap(0))
-    
-    # send byte over UART
-    await Timer(1.2, units="ms")
-    await do_tx(uart_rx, 9600, ord('C'))
+    # send 9 bytes over UART
+    for i in range(10):
+        await do_tx(uart_rx, 9600, ord('0') + i)
 
-    # send two more bytes over UART
-    await Timer(0.3, units="ms")
-    await do_tx(uart_rx, 9600, ord('i'))
-    await do_tx(uart_rx, 9600, ord('r'))
+    await wait_reset(dut, led)
 
     # wait for LED matrix update
-    c1 = await get_char(dut, led)
-    c2 = await get_char(dut, led)
+    clist = []
+    for i in range(8):
+        clist.append( await get_char(dut, led) )
     await check_reset(dut, led)
 
-    assert(c1 == get_char_bitmap(ord('i')))
-    assert(c2 == get_char_bitmap(ord('r')))
-
-    # send two more bytes over UART
-    await do_tx(uart_rx, 9600, ord('o'))
-
-    # wait for LED matrix update
-    c1 = await get_char(dut, led)
-    c2 = await get_char(dut, led)
-    await check_reset(dut, led)
-
-    assert(c1 == get_char_bitmap(ord('r')))
-    assert(c2 == get_char_bitmap(ord('o')))
+    assert clist == [get_char_bitmap(ord('2') + i) for i in range(8)]
 
 
 @cocotb.test(timeout_time=50, timeout_unit='ms')
