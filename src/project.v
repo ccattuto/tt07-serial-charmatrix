@@ -214,9 +214,9 @@ always @(posedge clk) begin
       IDLE: begin
         led_index <= 0;
         char_led_index <= 0;
-        textbuf_index <= textbuf_base;
         ledstrip_valid <= 0;
         if (&counter) begin // trigger refresh (75 Hz)
+          textbuf_index <= textbuf_base;
           state <= LATCH_CHAR;
         end
       end
