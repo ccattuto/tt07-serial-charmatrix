@@ -31,7 +31,7 @@ Basic setup:
 
 To use **more than one Pixie Chroma**, [chain](https://connornishijima.github.io/Pixie_Chroma/?section=datasheet) additional displays after the first one. This project supports up to 4 displays (e.g., 8 5x7 LED matrices). Set `ui[1]` and `ui[0]` (e.g., by using the DIP switches of the PCB) to configure the number of displays you are using: `00` for 1 display, `01` for 2 displays, `10` for 3 displays, and `11` for 4 displays (8 5x7 characters).
 
-Dimming of the LED matrix is controlled by the `ui[5]` and `ui[4]` signals: `00` for no dimming, `01`, `10`, and `11` for decreasing luminosity.
+Dimming of the LED matrix is controlled by the `ui[5]` and `ui[4]` signals: `00` for no dimming, `01`, `10`, and `11` for increasing dimming.
 
 ## External hardware
 
