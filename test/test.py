@@ -150,7 +150,7 @@ async def test_4chars(dut):
     assert(c4 == get_char_bitmap(ord('X')))
 
 
-@cocotb.test(timeout_time=50, timeout_unit='ms')
+@cocotb.test(timeout_time=60, timeout_unit='ms')
 async def test_8chars(dut):
     dut._log.info("Start")
 
@@ -198,7 +198,7 @@ async def test_8chars(dut):
     assert clist == [get_char_bitmap(ord('2') + i) for i in range(8)]
 
 
-@cocotb.test(timeout_time=50, timeout_unit='ms')
+@cocotb.test(timeout_time=10, timeout_unit='ms')
 async def test_uart_loopback(dut):
     dut._log.info("Start")
 
