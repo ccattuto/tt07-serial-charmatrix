@@ -22,8 +22,8 @@ module tt_um_ccattuto_charmatrix (
 // All output pins must be assigned. If not used, assign to 0.
 assign uio_out = 0;
 assign uio_oe  = 0;
-assign uo_out[3:1] = 0;
-assign uo_out[7:5] = 0;
+assign uo_out[3:2] = 0;
+assign uo_out[6:5] = 0;
 
 // UART RX
 wire uart_rx;
@@ -33,8 +33,14 @@ assign uart_rx = ui_in[3];
 wire uart_tx;
 assign uo_out[4] = uart_tx;
 
+// UART RX valid
+assign uo_out[7] = uart_rx_valid;
+
 // LED strip signal
 assign uo_out[0] = ledstrip;
+
+// LED strip latch signal
+assign uo_out[1] = ledstrip_latch;
 
 // configuration selector
 wire [1:0] config_sel;
