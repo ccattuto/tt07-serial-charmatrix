@@ -21,61 +21,52 @@ async def test_2chars(dut):
     uart_rx = dut.ui_in[3]
     led = dut.uo_out[0]
 
-    # GPIO IN
-    dut.ui_in.value = 0
-    uart_rx.value = 1 # keep RX high
-    # config: 2 chars
-    dut.ui_in[0].value = 0
-    dut.ui_in[1].value = 0
-    # config: no UART loopback
-    dut.ui_in[2].value = 0
+    # GPIO config
+    do_gpio_config(dut, num_chars=2)
 
-    # GPIO OUT
-    dut.uio_in.value = 0
-
-     # reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.rst_n.value = 0
-    await Timer(1, units="us")
-    dut.rst_n.value = 1
-    await Timer(1, units="us")
+    # reset
+    await do_reset(dut)
 
     assert led.value == 0
 
     # wait for LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
     assert(c1 == get_char_bitmap(0))
     assert(c2 == get_char_bitmap(0))
     
     # send byte over UART
     await Timer(1.2, units="ms")
+    dut._log.info("Sending: C")
     await do_tx(uart_rx, 9600, ord('C'))
 
     # send two more bytes over UART
     await Timer(0.3, units="ms")
+    dut._log.info("Sending: ir")
     await do_tx(uart_rx, 9600, ord('i'))
     await do_tx(uart_rx, 9600, ord('r'))
 
-    # wait for LED matrix update
+    # parse LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert(c1 == get_char_bitmap(ord('i')))
     assert(c2 == get_char_bitmap(ord('r')))
 
-    # send two more bytes over UART
+    # send one more byte over UART
+    dut._log.info("Sending: o")
     await do_tx(uart_rx, 9600, ord('o'))
 
-    # wait for LED matrix update
+    # parse LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert(c1 == get_char_bitmap(ord('r')))
     assert(c2 == get_char_bitmap(ord('o')))
 
@@ -92,25 +83,14 @@ async def test_4chars(dut):
     uart_rx = dut.ui_in[3]
     led = dut.uo_out[0]
 
-    # GPIO IN
-    dut.ui_in.value = 0
-    uart_rx.value = 1 # keep RX high
+    # GPIO config
+    do_gpio_config(dut, num_chars=4)
     # config: 4 chars
-    dut.ui_in[0].value = 1
-    dut.ui_in[1].value = 0
-    # config: no UART loopback
-    dut.ui_in[2].value = 0
+    #dut.ui_in[0].value = 1
+    #dut.ui_in[1].value = 0
 
-    # GPIO OUT
-    dut.uio_in.value = 0
-
-     # reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.rst_n.value = 0
-    await Timer(1, units="us")
-    dut.rst_n.value = 1
-    await Timer(1, units="us")
+    # reset
+    await do_reset(dut)
 
     assert led.value == 0
 
@@ -119,8 +99,9 @@ async def test_4chars(dut):
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert(c1 == get_char_bitmap(0))
     assert(c2 == get_char_bitmap(0))
     assert(c3 == get_char_bitmap(0))
@@ -128,36 +109,41 @@ async def test_4chars(dut):
 
     # send byte over UART
     await Timer(1.2, units="ms")
+    dut._log.info("Sending: C")
     await do_tx(uart_rx, 9600, ord('C'))
 
     # send two more bytes over UART
     await Timer(0.3, units="ms")
+    dut._log.info("Sending: ir")
     await do_tx(uart_rx, 9600, ord('i'))
     await do_tx(uart_rx, 9600, ord('r'))
 
-    # wait for LED matrix update
+    # parse LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert(c1 == get_char_bitmap(0))
     assert(c2 == get_char_bitmap(ord('C')))
     assert(c3 == get_char_bitmap(ord('i')))
     assert(c4 == get_char_bitmap(ord('r')))
 
     # send two more bytes over UART
+    dut._log.info("Sending: oX")
     await do_tx(uart_rx, 9600, ord('o'))
     await do_tx(uart_rx, 9600, ord('X'))
 
-    # wait for LED matrix update
+    # parse LED matrix update
     c1 = await get_char(dut, led)
     c2 = await get_char(dut, led)
     c3 = await get_char(dut, led)
     c4 = await get_char(dut, led)
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert(c1 == get_char_bitmap(ord('i')))
     assert(c2 == get_char_bitmap(ord('r')))
     assert(c3 == get_char_bitmap(ord('o')))
@@ -176,25 +162,14 @@ async def test_8chars(dut):
     uart_rx = dut.ui_in[3]
     led = dut.uo_out[0]
 
-    # GPIO IN
-    dut.ui_in.value = 0
-    uart_rx.value = 1 # keep RX high
+    # GPIO config
+    do_gpio_config(dut, num_chars=8)
     # config: 8 chars
-    dut.ui_in[0].value = 1
-    dut.ui_in[1].value = 1
-    # config: no UART loopback
-    dut.ui_in[2].value = 0
+    #dut.ui_in[0].value = 1
+    #dut.ui_in[1].value = 1
 
-    # GPIO OUT
-    dut.uio_in.value = 0
-
-     # reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.rst_n.value = 0
-    await Timer(1, units="us")
-    dut.rst_n.value = 1
-    await Timer(1, units="us")
+    # reset
+    await do_reset(dut)
 
     assert led.value == 0
 
@@ -202,21 +177,24 @@ async def test_8chars(dut):
     clist = []
     for i in range(8):
         clist.append( await get_char(dut, led) )
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
     assert clist == [get_char_bitmap(0)] * 8
 
     # send 9 bytes over UART
     for i in range(10):
+        dut._log.info(f"Sending: {i}")
         await do_tx(uart_rx, 9600, ord('0') + i)
 
-    await wait_reset(dut, led)
+    # wait for next refresh
+    await wait_led_reset(dut, led)
 
-    # wait for LED matrix update
+    # parse LED matrix update
     clist = []
     for i in range(8):
         clist.append( await get_char(dut, led) )
-    await check_reset(dut, led)
+    await check_led_reset(dut, led)
 
+    # check LED matrix state
     assert clist == [get_char_bitmap(ord('2') + i) for i in range(8)]
 
 
@@ -232,19 +210,28 @@ async def test_uart_loopback(dut):
     uart_rx = dut.ui_in[3]
     uart_tx = dut.uo_out[4]
 
-    # GPIO IN
-    dut.ui_in.value = 0
-    uart_rx.value = 1 # keep RX high
-    # config: 2 chars
-    dut.ui_in[0].value = 0
-    dut.ui_in[1].value = 0
-    # config: UART loopback
-    dut.ui_in[2].value = 1
+    # GPIO config
+    do_gpio_config(dut, uart_loopback=1)
 
-    # GPIO OUT
-    dut.uio_in.value = 0
+    # reset
+    await do_reset(dut)
 
-     # reset
+    # send byte to UART receiver
+    await Timer(0.1, units="ms")
+    TEST_BYTE = 0xA5
+    dut._log.info("Sending: 0xA5")
+    await do_tx(uart_rx, 9600, TEST_BYTE)
+
+    # check byte from UART transmitter
+    rx_byte = await do_rx(dut, uart_tx, 9600)
+    dut._log.info("Received 0x%02X" % rx_byte)
+    assert rx_byte == TEST_BYTE
+
+
+
+# HELPER FUNCTIONS
+
+async def do_reset(dut):
     dut._log.info("Reset")
     dut.ena.value = 1
     dut.rst_n.value = 0
@@ -252,16 +239,23 @@ async def test_uart_loopback(dut):
     dut.rst_n.value = 1
     await Timer(1, units="us")
 
-    await Timer(0.1, units="ms")
-    TEST_BYTE = 0xA5
-    await do_tx(uart_rx, 9600, TEST_BYTE)
+def do_gpio_config(dut, num_chars=2, uart_loopback=0, led_dimmer=0):
+    dut._log.info("GPIO config")
+    # GPIO IN
+    dut.ui_in.value = 0
+    # keep RX high
+    dut.ui_in[3].value = 1
+    # config: UART loopback
+    dut.ui_in[2].value = uart_loopback
+    # config: num chars
+    dut.ui_in[0].value = (num_chars // 2 - 1) & 1
+    dut.ui_in[1].value = (num_chars // 2 - 1) >> 1
+    # config: no LED dimmer
+    dut.ui_in[4].value = led_dimmer & 1
+    dut.ui_in[5].value = led_dimmer >> 1
 
-    rx_byte = await do_rx(dut, uart_tx, 9600)
-    assert rx_byte == TEST_BYTE
-
-
-
-# HELPER FUNCTIONS
+    # GPIO IN/OUT
+    dut.uio_in.value = 0
 
 CHAR_ROM = [s.strip()[::-1] for s in open('font.bin').readlines()]
 def get_char_bitmap(c):
@@ -369,7 +363,7 @@ async def get_GRB(dut, led):
 
     return bitseq
 
-async def check_reset(dut, led):
+async def check_led_reset(dut, led):
         did_timeout = False
         assert led.value == 0
         try:
@@ -380,7 +374,7 @@ async def check_reset(dut, led):
         assert did_timeout
         assert led.value == 0
 
-async def wait_reset(dut, led):
+async def wait_led_reset(dut, led):
         low_time = 0
         while low_time < 50:
             try:
