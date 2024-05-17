@@ -34,8 +34,8 @@ async def test_2chars(dut):
     c2 = await get_char(dut, led)
     await check_led_reset(dut, led)
 
-    assert(c1 == get_char_bitmap(0))
-    assert(c2 == get_char_bitmap(0))
+    assert c1.bitmap == get_char_bitmap(0)
+    assert c2.bitmap == get_char_bitmap(0)
     
     # send byte over UART
     await Timer(1.2, units="ms")
@@ -54,8 +54,8 @@ async def test_2chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert(c1 == get_char_bitmap(ord('i')))
-    assert(c2 == get_char_bitmap(ord('r')))
+    assert c1.bitmap == get_char_bitmap(ord('i'))
+    assert c2.bitmap == get_char_bitmap(ord('r'))
 
     # send one more byte over UART
     dut._log.info("Sending: o")
@@ -67,8 +67,8 @@ async def test_2chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert(c1 == get_char_bitmap(ord('r')))
-    assert(c2 == get_char_bitmap(ord('o')))
+    assert c1.bitmap == get_char_bitmap(ord('r'))
+    assert c2.bitmap == get_char_bitmap(ord('o'))
 
 
 @cocotb.test(timeout_time=50, timeout_unit='ms')
@@ -85,9 +85,6 @@ async def test_4chars(dut):
 
     # GPIO config
     do_gpio_config(dut, num_chars=4)
-    # config: 4 chars
-    #dut.ui_in[0].value = 1
-    #dut.ui_in[1].value = 0
 
     # reset
     await do_reset(dut)
@@ -102,10 +99,10 @@ async def test_4chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert(c1 == get_char_bitmap(0))
-    assert(c2 == get_char_bitmap(0))
-    assert(c3 == get_char_bitmap(0))
-    assert(c4 == get_char_bitmap(0))
+    assert c1.bitmap == get_char_bitmap(0)
+    assert c2.bitmap == get_char_bitmap(0)
+    assert c3.bitmap == get_char_bitmap(0)
+    assert c4.bitmap == get_char_bitmap(0)
 
     # send byte over UART
     await Timer(1.2, units="ms")
@@ -126,10 +123,10 @@ async def test_4chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert(c1 == get_char_bitmap(0))
-    assert(c2 == get_char_bitmap(ord('C')))
-    assert(c3 == get_char_bitmap(ord('i')))
-    assert(c4 == get_char_bitmap(ord('r')))
+    assert c1.bitmap == get_char_bitmap(0)
+    assert c2.bitmap == get_char_bitmap(ord('C'))
+    assert c3.bitmap == get_char_bitmap(ord('i'))
+    assert c4.bitmap == get_char_bitmap(ord('r'))
 
     # send two more bytes over UART
     dut._log.info("Sending: oX")
@@ -144,10 +141,10 @@ async def test_4chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert(c1 == get_char_bitmap(ord('i')))
-    assert(c2 == get_char_bitmap(ord('r')))
-    assert(c3 == get_char_bitmap(ord('o')))
-    assert(c4 == get_char_bitmap(ord('X')))
+    assert c1.bitmap == get_char_bitmap(ord('i'))
+    assert c2.bitmap == get_char_bitmap(ord('r'))
+    assert c3.bitmap == get_char_bitmap(ord('o'))
+    assert c4.bitmap == get_char_bitmap(ord('X'))
 
 
 @cocotb.test(timeout_time=60, timeout_unit='ms')
@@ -164,9 +161,6 @@ async def test_8chars(dut):
 
     # GPIO config
     do_gpio_config(dut, num_chars=8)
-    # config: 8 chars
-    #dut.ui_in[0].value = 1
-    #dut.ui_in[1].value = 1
 
     # reset
     await do_reset(dut)
@@ -178,7 +172,7 @@ async def test_8chars(dut):
     for i in range(8):
         clist.append( await get_char(dut, led) )
     await check_led_reset(dut, led)
-    assert clist == [get_char_bitmap(0)] * 8
+    assert [c.bitmap for c in clist] == [get_char_bitmap(0)] * 8
 
     # send 9 bytes over UART
     for i in range(10):
@@ -195,7 +189,7 @@ async def test_8chars(dut):
     await check_led_reset(dut, led)
 
     # check LED matrix state
-    assert clist == [get_char_bitmap(ord('2') + i) for i in range(8)]
+    assert [c.bitmap for c in clist] == [get_char_bitmap(ord('2') + i) for i in range(8)]
 
 
 @cocotb.test(timeout_time=10, timeout_unit='ms')
@@ -228,6 +222,139 @@ async def test_uart_loopback(dut):
     assert rx_byte == TEST_BYTE
 
 
+async def trigger_refresh(dut, uart_rx):
+    dut._log.info("Sending CR")
+    await do_tx(uart_rx, 9600, 13)
+
+@cocotb.test(timeout_time=50, timeout_unit='ms')
+async def test_uart_refresh(dut):
+    dut._log.info("Start")
+
+    # Set the clock period to 50 ns (20 MHz)
+    clock = Clock(dut.clk, 50, units="ns")
+    cocotb.start_soon(clock.start())
+
+    # signals
+    uart_rx = dut.ui_in[3]
+    led = dut.uo_out[0]
+
+    # GPIO config
+    do_gpio_config(dut, num_chars=2, ext_refresh=1)
+
+    # reset
+    await do_reset(dut)
+
+    assert led.value == 0
+
+    # send 4 bytes over UART
+    await Timer(0.2, units="ms")
+    dut._log.info("Sending: Hiya")
+    await do_tx(uart_rx, 9600, ord('H'))
+    await do_tx(uart_rx, 9600, ord('i'))
+    await do_tx(uart_rx, 9600, ord('y'))
+    await do_tx(uart_rx, 9600, ord('a'))
+
+    # check that matrix does not refresh
+    dut._log.info("Wait for 20 ms...")
+    did_timeout = False
+    try:
+        await with_timeout(Edge(dut.uo_out), 20, 'ms')
+    except cocotb.result.SimTimeoutError:
+        did_timeout = True
+        dut._log.info("Correctly timed out")
+    assert did_timeout
+    assert led.value == 0
+
+    # send CR over UART to trigger refresh
+    f = cocotb.start_soon(trigger_refresh(dut, uart_rx))
+
+    # parse LED matrix update
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
+    await check_led_reset(dut, led)
+    await f
+
+    # check LED matrix state
+    assert c1.bitmap == get_char_bitmap(ord('y'))
+    assert c2.bitmap == get_char_bitmap(ord('a'))
+
+
+@cocotb.test(timeout_time=50, timeout_unit='ms')
+async def test_uart_color(dut):
+    dut._log.info("Start")
+
+    # Set the clock period to 50 ns (20 MHz)
+    clock = Clock(dut.clk, 50, units="ns")
+    cocotb.start_soon(clock.start())
+
+    # signals
+    uart_rx = dut.ui_in[3]
+    led = dut.uo_out[0]
+
+    # GPIO config
+    do_gpio_config(dut, num_chars=4, fixed_color=1)
+
+    # reset
+    await do_reset(dut)
+
+    assert led.value == 0
+
+    # wait for LED matrix update
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
+    c3 = await get_char(dut, led)
+    c4 = await get_char(dut, led)
+    await check_led_reset(dut, led)
+
+    # check LED matrix state
+    assert c1.bitmap == get_char_bitmap(0)
+    assert c2.bitmap == get_char_bitmap(0)
+    assert c3.bitmap == get_char_bitmap(0)
+    assert c4.bitmap == get_char_bitmap(0)
+
+    assert c1.color == COLOR_LIST[0]
+    assert c2.color == COLOR_LIST[0]
+    assert c3.color == COLOR_LIST[0]
+    assert c4.color == COLOR_LIST[0]
+
+    # send color command + printable chars over UART
+    await Timer(0.25, units="ms")
+    dut._log.info("Sending: [color 7] Da")
+    await do_tx(uart_rx, 9600, 0x80 | 0x07)
+    await do_tx(uart_rx, 9600, ord('D'))
+    await do_tx(uart_rx, 9600, ord('a'))
+
+    # send color command + printable char over UART
+    dut._log.info("Sending: [color 10] n")
+    await do_tx(uart_rx, 9600, 0x80 | 0x0A)
+    await do_tx(uart_rx, 9600, ord('n'))
+
+    # send color command + printable char over UART
+    dut._log.info("Sending: [color 15] i")
+    await do_tx(uart_rx, 9600, 0x80 | 0x0F)
+    await do_tx(uart_rx, 9600, ord('i'))
+
+    # wait for next refresh
+    await wait_led_reset(dut, led)
+
+    # parse LED matrix update
+    c1 = await get_char(dut, led)
+    c2 = await get_char(dut, led)
+    c3 = await get_char(dut, led)
+    c4 = await get_char(dut, led)
+    await check_led_reset(dut, led)
+
+    # check LED matrix state
+    assert c1.bitmap == get_char_bitmap(ord('D'))
+    assert c2.bitmap == get_char_bitmap(ord('a'))
+    assert c3.bitmap == get_char_bitmap(ord('n'))
+    assert c4.bitmap == get_char_bitmap(ord('i'))
+
+    assert c1.color == COLOR_LIST[7]
+    assert c2.color == COLOR_LIST[7]
+    assert c3.color == COLOR_LIST[10]
+    assert c4.color == COLOR_LIST[15]
+
 
 # HELPER FUNCTIONS
 
@@ -239,7 +366,7 @@ async def do_reset(dut):
     dut.rst_n.value = 1
     await Timer(1, units="us")
 
-def do_gpio_config(dut, num_chars=2, uart_loopback=0, led_dimmer=0):
+def do_gpio_config(dut, num_chars=2, uart_loopback=0, led_dimmer=0, ext_refresh=0, fixed_color=0):
     dut._log.info("GPIO config")
     # GPIO IN
     dut.ui_in.value = 0
@@ -253,10 +380,10 @@ def do_gpio_config(dut, num_chars=2, uart_loopback=0, led_dimmer=0):
     # config: no LED dimmer
     dut.ui_in[4].value = led_dimmer & 1
     dut.ui_in[5].value = led_dimmer >> 1
-    # config: internal refresh trigger
-    dut.ui_in[6].value = 0
-    # config: random character color
-    dut.ui_in[7].value = 0
+    # config: internal/external refresh trigger
+    dut.ui_in[6].value = ext_refresh
+    # config: random/fixed character color
+    dut.ui_in[7].value = fixed_color
 
     # GPIO IN/OUT
     dut.uio_in.value = 0
@@ -269,7 +396,7 @@ def get_char_bitmap(c):
         i = -1
     return CHAR_ROM[i]
 
-VALID_COLORS = [
+COLOR_LIST = [
     "000000001100110000000000",
     "010011001100110000000000",
     "100110011100110000000000",
@@ -318,6 +445,12 @@ async def do_rx(dut, uart_tx, baud):
 
     return data
 
+# class to hold character's bitmap & color
+class Char():
+    def __init__(self, bitmap, color):
+        self.bitmap = bitmap
+        self.color = color
+
 # read 5x7 character
 async def get_char(dut, led):
     cseq = []
@@ -333,7 +466,7 @@ async def get_char(dut, led):
 
     # same color for all LEDS in a given character, and a valid color
     assert len(color_set) == 1
-    assert list(color_set)[0] in VALID_COLORS
+    assert list(color_set)[0] in COLOR_LIST
 
     # print character
     print()
@@ -342,7 +475,10 @@ async def get_char(dut, led):
         dut._log.info(linestring)
     print()
 
-    return "".join([str(x) for x in cseq])
+    bitmap = "".join([str(x) for x in cseq])
+    color = list(color_set)[0]
+
+    return Char(bitmap, color)
 
 # read 24 color bits (G / R / B)
 async def get_GRB(dut, led):
@@ -359,8 +495,8 @@ async def get_GRB(dut, led):
 
         pulse_ns = t2-t1
         # check pulse duration
-        assert(pulse_ns > 300)
-        assert(pulse_ns < 900)
+        assert pulse_ns > 300
+        assert pulse_ns < 900
 
         # decode bit
         bitseq.append( 1 if (pulse_ns > 625) else 0 )
