@@ -425,7 +425,8 @@ async def do_tx(uart_rx, baud, data):
         await Timer(int(1.0 / baud * 1e12), units="ps")
 
 async def do_rx(dut, uart_tx, baud):
-    await Edge(dut.uo_out)
+    while uart_tx.value == 1:
+        await Edge(dut.uo_out)
     assert uart_tx.value == 0
 
     # wait 1/2 bit
