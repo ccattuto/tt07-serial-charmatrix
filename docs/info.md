@@ -13,13 +13,12 @@ This project drives an LED-matrix character display composed of one or more [Pix
 
 Up to 4 chained devices are supported for a maximum of 8 characters. The displayed characters are received from a serial port using the UART protocol (9600 baud, 8N1). The project includes a [simple UART implementation](https://github.com/ccattuto/verilog-uart). Every time a character is received over UART, the displayed characters shift left, and the new character appears to the right. 5x7 matrix representations for printable ASCII characters are supported using the font from [Arduino Microview Library](https://github.com/geekammo/MicroView-Arduino-Library/blob/master/font5x7.h) encoded in a character ROM. Non-printable ASCII characters are shown as an empty rectangle. Each new character appears with a color randomly chosen among a palette of 16 colors contained in a color ROM. A pseudo-random number generator based on a linear-feedback shift register is used for color selection.
 
-The project is designed to demonstrate the underlying Verilog modules, which should be easily re-usable:
+The project is designed to demonstrate components that should be easily re-usable:
  - WS2812B LED strip driver
- - UART receiver and transmitter (8N1 only, no flow control)
+ - [UART receiver and transmitter](https://github.com/ccattuto/verilog-uart) (8N1 only, no flow control)
  - linear-feedback pseudo-random number generator
  - character ROM
- 
- The cocotb code to parse the [WS2812B protocol](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf) might also be useful to others.
+ - cocotb tests for UART and [WS2812B protocol](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf)
 
 
 ## How to test
