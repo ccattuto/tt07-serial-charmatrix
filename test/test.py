@@ -253,6 +253,10 @@ def do_gpio_config(dut, num_chars=2, uart_loopback=0, led_dimmer=0):
     # config: no LED dimmer
     dut.ui_in[4].value = led_dimmer & 1
     dut.ui_in[5].value = led_dimmer >> 1
+    # config: internal refresh trigger
+    dut.ui_in[6].value = 0
+    # config: random character color
+    dut.ui_in[7].value = 0
 
     # GPIO IN/OUT
     dut.uio_in.value = 0

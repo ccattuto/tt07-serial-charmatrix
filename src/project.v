@@ -53,6 +53,14 @@ assign uart_tx_en = ui_in[2];
 wire [1:0] dimmer_sel;
 assign dimmer_sel = ui_in[5:4];
 
+// internal/external refresh selector
+wire ext_refresh;
+assign ext_refresh = ui_in[6];
+
+// random/fixed color selector
+wire color_sel;
+assign color_sel = ui_in[7];
+
 // reset
 wire boot_reset;
 assign boot_reset = ~rst_n;
@@ -215,7 +223,7 @@ always @(posedge clk) begin
         led_index <= 0;
         char_led_index <= 0;
         ledstrip_valid <= 0;
-        if (&counter) begin // trigger refresh (75 Hz)
+        if ((~ext_refresh & &counter) || (ext_refresh & trig_refresh)) begin // trigger refresh
           textbuf_index <= textbuf_base;
           state <= LATCH_CHAR;
         end
@@ -274,6 +282,8 @@ end
 
 integer i;
 reg [$clog2(MAX_CHARS)-1:0] textbuf_base;
+reg trig_refresh;
+reg [3:0] fixed_color;
 
 always @(posedge clk) begin
   if (boot_reset) begin
@@ -284,21 +294,37 @@ always @(posedge clk) begin
       textbuf[i] <= 8'b0;
       colorbuf[i] <= 4'b0;
     end
+    trig_refresh <= 0;
+    fixed_color <= 0;
   end else begin
     if (!(uart_rx_valid & uart_rx_ready)) begin
       uart_rx_ready <= 1;
       if (uart_tx_valid & uart_tx_ready) begin
         uart_tx_valid <= 0;
       end
+      if (ledstrip_ready) begin
+        trig_refresh <= 0;
+      end
     end else begin // VALID & READY => process RX byte
       uart_rx_ready <= 0;
       uart_tx_valid <= 1; // start TX
-      textbuf[textbuf_base] <= uart_rx_data;
-      colorbuf[textbuf_base] <= rnd_color;
-      if (textbuf_base < num_chars) begin
-        textbuf_base <= textbuf_base + 1;
+
+      // LF -> refresh
+      if (ext_refresh && ((uart_rx_data == 13) || (uart_rx_data == 10))) begin
+        trig_refresh <= 1;
+      end else if (uart_rx_data[7]) begin
+        fixed_color <= uart_rx_data[3:0];
       end else begin
-        textbuf_base <= 0;
+
+        textbuf[textbuf_base] <= uart_rx_data;
+        colorbuf[textbuf_base] <= (color_sel) ? fixed_color : rnd_color;
+
+        if (textbuf_base < num_chars) begin
+          textbuf_base <= textbuf_base + 1;
+        end else begin
+          textbuf_base <= 0;
+        end
+
       end
     end
   end
