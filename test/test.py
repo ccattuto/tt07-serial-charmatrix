@@ -212,8 +212,8 @@ async def test_uart_loopback(dut):
 
     # send byte to UART receiver
     await Timer(0.1, units="ms")
-    TEST_BYTE = 0xA5
-    dut._log.info("Sending: 0xA5")
+    TEST_BYTE = 0xA7
+    dut._log.info("Sending: 0x%02X" % TEST_BYTE)
     await do_tx(uart_rx, 9600, TEST_BYTE)
 
     # check byte from UART transmitter
@@ -438,7 +438,7 @@ async def do_rx(dut, uart_tx, baud):
     data = 0
     for i in range(8):
         await Timer(int(1.0 / baud * 1e12), units="ps")
-        data = (data << 1) | (1 if uart_tx.value == 1 else 0)
+        data |= (1 << i) if uart_tx.value == 1 else 0
 
     # check stop bit
     await Timer(int(1.0 / baud * 1e12), units="ps")
